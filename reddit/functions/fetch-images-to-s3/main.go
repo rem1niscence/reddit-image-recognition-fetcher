@@ -22,7 +22,6 @@ var (
 	redditImageDomains = []string{
 		"https://i.redd.it/",
 		"https://i.imgur.com/",
-		"https://goo.gl/maps/",
 	}
 	redditImagesBucket = environment.GetString("REDDIT_IMAGES_BUCKET", "ra-reddit-images")
 	subreddit          = environment.GetString("SUBREDDIT", "Konosuba")
@@ -36,7 +35,6 @@ const (
 // RedditRequest is the struct for the lambda request data
 type RedditRequest struct {
 	*events.APIGatewayProxyRequest
-	images []string
 }
 
 func apiGatewayHandler(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
@@ -53,17 +51,11 @@ func apiGatewayHandler(ctx context.Context, request events.APIGatewayProxyReques
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Body:       string(data),
-			Headers: map[string]string{
-				"Access-Control-Allow-Origin": "*",
-			},
 		}, nil
 	}
 
 	return &events.APIGatewayProxyResponse{
 		StatusCode: 200,
-		Headers: map[string]string{
-			"Access-Control-Allow-Origin": "*",
-		},
 	}, nil
 }
 
@@ -126,7 +118,6 @@ func (req RedditRequest) uploadToS3(ctx context.Context, url string, name string
 
 	extension := strings.Split(resp.Header.Get("Content-Type"), "/")[1]
 
-	// TODO: Check better file naming source
 	err = s3.UploadObject(ctx, redditImagesBucket, name+"."+extension, body)
 	if err != nil {
 		fmt.Println(err)
