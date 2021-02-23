@@ -1,6 +1,10 @@
 #  -------------------------------------------------------------
 #   Copyright (c) Microsoft Corporation.  All rights reserved.
 #  -------------------------------------------------------------
+# Modified by Roniel Valdez
+# NOTE: You'll need to compile the dependencies inside a docker container
+# based on lamdba, runtime errros otherwise you'll run into
+
 """
 Skeleton code showing how to load and run the TensorFlow SavedModel export package from Lobe.
 """
@@ -27,6 +31,8 @@ IMG_PATH = os.path.join(BASE_PATH, 'img')
 
 s3.Bucket("ra-model-storage").download_file(MODEL_FILENAME, MODEL_PATH)
 s3.Bucket("ra-model-storage").download_file(SIGNATURE_FILENAME, SIGNATURE_PATH)
+
+QUEUE_NAME = os.getenv('QUEUE_NAME', 'ImageQueue')
 
 
 def get_model_and_sig(model_dir):
@@ -145,25 +151,63 @@ def main(image, model_dir):
 
 
 def lambda_handler(event, context):
-    results = {}
+    result = {}
     for record in event['Records']:
-      bucket = record['s3']['bucket']['name']
-      key = record['s3']['object']['key']
+        bucket = record['s3']['bucket']['name']
+        key = record['s3']['object']['key']
 
-      print('Running Deep Learning example using Tensorflow library ...')
-      print(
-          'Image to be processed, from: bucket [%s], object key: [%s]' %
-          (bucket, key))
+        print('Running Deep Learning example using Tensorflow library ...')
+        print(
+            'Image to be processed, from: bucket [%s], object key: [%s]' %
+            (bucket, key))
 
-      s3.Bucket(bucket).download_file(key, IMG_PATH)
+        s3.Bucket(bucket).download_file(key, IMG_PATH)
 
-      image = Image.open(IMG_PATH)
-      if image.mode != "RGB":
-        image = image.convert("RGB")
+        image = Image.open(IMG_PATH)
+        if image.mode != "RGB":
+            image = image.convert("RGB")
 
-      prediction = main(image, BASE_PATH)
+        prediction = main(image, BASE_PATH)
 
-      results = prediction
+        result = prediction
 
-    print(results)
-    return results
+    # Desired Image was detected
+    if 'No' not in result['Prediction']:
+        send_result_to_queue(bucket, key, result['Prediction'])
+
+    return result
+
+
+def send_result_to_queue(bucket_name, key, prediction):
+    queue_url = get_queue_url()
+
+    sqs = boto3.client("sqs")
+
+    response = sqs.send_message(QueueUrl=queue_url,
+                                DelaySeconds=0,
+                                MessageAttributes={
+                                    'Bucket': {
+                                        'DataType': "String",
+                                        'StringValue': bucket_name
+                                    },
+                                    'Key': {
+                                        'DataType': "String",
+                                        'StringValue': key
+                                    },
+                                    'Prediction': {
+                                        'DataType': "String",
+                                        'StringValue': prediction
+                                    },
+                                },
+                                MessageBody=(
+                                    'Yes prediction of ML Model')
+                                )
+    print('queue successfully sent. ID:', response['MessageId'])
+
+
+def get_queue_url():
+    sqs_client = boto3.client("sqs", region_name="us-east-2")
+    response = sqs_client.get_queue_url(
+        QueueName=QUEUE_NAME,
+    )
+    return response["QueueUrl"]
