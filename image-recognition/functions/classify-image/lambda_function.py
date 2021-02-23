@@ -186,15 +186,15 @@ def send_result_to_queue(bucket_name, key, prediction):
     response = sqs.send_message(QueueUrl=queue_url,
                                 DelaySeconds=0,
                                 MessageAttributes={
-                                    'Bucket': {
+                                    'bucket': {
                                         'DataType': "String",
                                         'StringValue': bucket_name
                                     },
-                                    'Key': {
+                                    'key': {
                                         'DataType': "String",
                                         'StringValue': key
                                     },
-                                    'Prediction': {
+                                    'prediction': {
                                         'DataType': "String",
                                         'StringValue': prediction
                                     },
