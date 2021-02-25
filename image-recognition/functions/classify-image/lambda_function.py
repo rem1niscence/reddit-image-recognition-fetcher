@@ -178,29 +178,18 @@ def lambda_handler(event, context):
     return result
 
 
-def send_result_to_queue(bucket_name, key, prediction):
+def send_result_to_queue(bucket, key, prediction):
     queue_url = get_queue_url()
 
     sqs = boto3.client("sqs")
 
     response = sqs.send_message(QueueUrl=queue_url,
                                 DelaySeconds=0,
-                                MessageAttributes={
-                                    'bucket': {
-                                        'DataType': "String",
-                                        'StringValue': bucket_name
-                                    },
-                                    'key': {
-                                        'DataType': "String",
-                                        'StringValue': key
-                                    },
-                                    'prediction': {
-                                        'DataType': "String",
-                                        'StringValue': prediction
-                                    },
-                                },
-                                MessageBody=(
-                                    'Yes prediction of ML Model')
+                                MessageBody=(json.dumps({
+                                    'bucket': bucket,
+                                    'key': key,
+                                    'prediction': prediction,
+                                }))
                                 )
     print('queue successfully sent. ID:', response['MessageId'])
 
