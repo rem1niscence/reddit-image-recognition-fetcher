@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"encoding/json"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
@@ -37,26 +35,19 @@ type RedditRequest struct {
 	*events.APIGatewayProxyRequest
 }
 
-func apiGatewayHandler(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) error {
 	req := RedditRequest{
 		APIGatewayProxyRequest: &request,
 	}
 
 	err := req.fetchImagesUrls(ctx)
 	if err != nil {
-		data, _ := json.Marshal(map[string]string{
-			"error": err.Error(),
-		})
+		fmt.Println(err)
 
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       string(data),
-		}, nil
+		return nil
 	}
 
-	return &events.APIGatewayProxyResponse{
-		StatusCode: 200,
-	}, nil
+	return nil
 }
 
 func (req RedditRequest) fetchImagesUrls(ctx context.Context) error {
@@ -135,5 +126,5 @@ func isValidRedditImageURL(rawURL string) bool {
 }
 
 func main() {
-	lambda.Start(apiGatewayHandler)
+	lambda.Start(handler)
 }
