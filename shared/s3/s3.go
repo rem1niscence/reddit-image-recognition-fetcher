@@ -3,6 +3,7 @@ package s3
 import (
 	"bytes"
 	"context"
+	"io/ioutil"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -34,4 +35,26 @@ func UploadObject(ctx context.Context, bucket, key string, data []byte) error {
 	}
 
 	return nil
+}
+
+// GetObject method for getting elements from s3
+func GetObject(ctx context.Context, bucket, key string) ([]byte, error) {
+	input := &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}
+
+	s3Result, err := Client.GetObjectWithContext(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := ioutil.ReadAll(s3Result.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	defer s3Result.Body.Close()
+
+	return file, nil
 }
