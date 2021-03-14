@@ -3,7 +3,7 @@
 #  -------------------------------------------------------------
 # Modified by Roniel Valdez
 # NOTE: You'll need to compile the dependencies inside a docker container
-# based on lamdba, runtime errros otherwise you'll run into
+# based on lamdba, otherwise you'll run into runtime errors   
 
 """
 Skeleton code showing how to load and run the TensorFlow SavedModel export package from Lobe.
